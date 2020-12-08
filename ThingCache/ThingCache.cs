@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using FakeItEasy;
+using FluentAssertions;
 using NUnit.Framework;
 
 namespace MockFramework
@@ -7,6 +9,7 @@ namespace MockFramework
     {
         private readonly IDictionary<string, Thing> dictionary
             = new Dictionary<string, Thing>();
+
         private readonly IThingService thingService;
 
         public ThingCache(IThingService thingService)
@@ -18,12 +21,16 @@ namespace MockFramework
         {
             Thing thing;
             if (dictionary.TryGetValue(thingId, out thing))
+            {
                 return thing;
+            }
+
             if (thingService.TryRead(thingId, out thing))
             {
                 dictionary[thingId] = thing;
                 return thing;
             }
+
             return null;
         }
     }
@@ -31,30 +38,43 @@ namespace MockFramework
     [TestFixture]
     public class ThingCache_Should
     {
-        private IThingService thingService;
-        private ThingCache thingCache;
-
         private const string thingId1 = "TheDress";
-        private Thing thing1 = new Thing(thingId1);
 
         private const string thingId2 = "CoolBoots";
-        private Thing thing2 = new Thing(thingId2);
+        private readonly Thing thing1 = new Thing(thingId1);
+        private readonly Thing thing2 = new Thing(thingId2);
+        private ThingCache thingCache;
+        private IThingService thingService;
 
-        // Метод, помеченный атрибутом SetUp, выполняется перед каждым тестов
         [SetUp]
         public void SetUp()
         {
-            //thingService = A...
+            thingService = A.Fake<IThingService>();
             thingCache = new ThingCache(thingService);
+            Thing _;
+            A.CallTo(() => thingService.TryRead(thingId1, out _)).Returns(true)
+                .AssignsOutAndRefParameters(thing1);
+            A.CallTo(() => thingService.TryRead(thingId2, out _)).Returns(true)
+                .AssignsOutAndRefParameters(thing2);
         }
 
-        // TODO: Написать простейший тест, а затем все остальные
-        // Live Template tt работает!
-
-        // Пример теста
         [Test]
-        public void GiveMeAGoodNamePlease()
+        public void Get_CallsService_WhenCalledOneTime()
         {
+            var th1 = thingCache.Get(thingId1);
+
+            A.CallTo(() => thingService.TryRead(thingId1, out th1)).MustHaveHappened(1, Times.Exactly);
+            th1.Should().Be(thing1);
+        }
+
+        [Test]
+        public void Get_CallsServiceOnce_WhenCacheCalledTwice()
+        {
+            var th1 = thingCache.Get(thingId1);
+            th1 = thingCache.Get(thingId1);
+
+            A.CallTo(() => thingService.TryRead(thingId1, out th1)).MustHaveHappenedOnceExactly();
+            th1.Should().Be(thing1);
         }
 
         /** Проверки в тестах
