@@ -19,11 +19,8 @@ namespace MockFramework
 
         public Thing Get(string thingId)
         {
-            Thing thing;
-            if (dictionary.TryGetValue(thingId, out thing))
-            {
+            if (dictionary.TryGetValue(thingId, out var thing))
                 return thing;
-            }
 
             if (thingService.TryRead(thingId, out thing))
             {
@@ -51,11 +48,13 @@ namespace MockFramework
         {
             thingService = A.Fake<IThingService>();
             thingCache = new ThingCache(thingService);
-            Thing _;
-            A.CallTo(() => thingService.TryRead(thingId1, out _)).Returns(true)
+            Thing thing;
+            A.CallTo(() => thingService.TryRead(A<string>.Ignored, out thing)).Returns(false);
+            A.CallTo(() => thingService.TryRead(thingId1, out thing)).Returns(true)
                 .AssignsOutAndRefParameters(thing1);
-            A.CallTo(() => thingService.TryRead(thingId2, out _)).Returns(true)
-                .AssignsOutAndRefParameters(thing2);
+            
+            A.CallTo(() => thingService.TryRead(thingId2, out thing)).Returns(true)
+                .AssignsOutAndRefParameters(thing2);;
         }
 
         [Test]
@@ -77,32 +76,57 @@ namespace MockFramework
             th1.Should().Be(thing1);
         }
 
-        /** Проверки в тестах
-         * Assert.AreEqual(expectedValue, actualValue);
-         * actualValue.Should().Be(expectedValue);
-         */
+        [Test]
+        public void Get_CacheReturnsEquals_CacheGetCalledTwice()
+        {
+            var get1 = thingCache.Get(thingId1);
+            var get2 = thingCache.Get(thingId1);
 
-        /** Синтаксис AAA
-         * Arrange:
-         * var fake = A.Fake<ISomeService>();
-         * A.CallTo(() => fake.SomeMethod(...)).Returns(true);
-         * Assert:
-         * var value = "42";
-         * A.CallTo(() => fake.TryRead(id, out value)).MustHaveHappened();
-         */
+            get1.Should().Be(get2);
+        }
 
-        /** Синтаксис out
-         * var value = "42";
-         * string _;
-         * A.CallTo(() => fake.TryRead(id, out _)).Returns(true)
-         *     .AssignsOutAndRefParameters(value);
-         * A.CallTo(() => fake.TryRead(id, out value)).Returns(true);
-         */
+        [Test]
+        public void Get_ReturnsNull_ServiceNotContainsThingId2()
+        {
+            var get = thingCache.Get("not existed id");
 
-        /** Синтаксис Repeat
-         * var value = "42";
-         * A.CallTo(() => fake.TryRead(id, out value))
-         *     .MustHaveHappened(Repeated.Exactly.Twice)
-         */
+            get.Should().BeNull();
+        }
+
+        // [Test]
+        // public void Get_ServiceCalledOnes_WhenCacheCalledTwiceWithNotExisted()
+        // {
+        //     var get1 = thingCache.Get("not existed id");
+        //     var get2 = thingCache.Get("not existed id");
+        //
+        //
+        //     A.CallTo(() => thingService.TryRead("not existed id", out get1)).MustHaveHappenedOnceExactly();
+        // }
+        
+        
+        
+       
+        // /** Синтаксис AAA
+        //  * Arrange:
+        //  * var fake = A.Fake<ISomeService>();
+        //  * A.CallTo(() => fake.SomeMethod(...)).Returns(true);
+        //  * Assert:
+        //  * var value = "42";
+        //  * A.CallTo(() => fake.TryRead(id, out value)).MustHaveHappened();
+        //  */
+
+        // /** Синтаксис out
+        //  * var value = "42";
+        //  * string _;
+        //  * A.CallTo(() => fake.TryRead(id, out _)).Returns(true)
+        //  *     .AssignsOutAndRefParameters(value);
+        //  * A.CallTo(() => fake.TryRead(id, out value)).Returns(true);
+        //  */
+        //
+        // /** Синтаксис Repeat
+        //  * var value = "42";
+        //  * A.CallTo(() => fake.TryRead(id, out value))
+        //  *     .MustHaveHappened(Repeated.Exactly.Twice)
+        //  */
     }
 }
